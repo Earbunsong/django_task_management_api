@@ -15,12 +15,20 @@ class Task(models.Model):
 
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
-    due_date = models.DateField(null=True, blank=True)
-    priority = models.CharField(max_length=10, choices=Priority.choices, default=Priority.MEDIUM)
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.TODO)
-    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='tasks')
-    created_at = models.DateTimeField(auto_now_add=True)
+    due_date = models.DateField(null=True, blank=True, db_index=True)
+    priority = models.CharField(max_length=10, choices=Priority.choices, default=Priority.MEDIUM, db_index=True)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.TODO, db_index=True)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='tasks', db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['owner', 'status']),
+            models.Index(fields=['owner', 'due_date']),
+            models.Index(fields=['-created_at']),
+        ]
 
     def __str__(self):
         return f"{self.title}"

@@ -58,7 +58,30 @@ class StripeWebhookView(APIView):
                 sub_obj.stripe_subscription_id = sess.get('subscription')
                 sub_obj.stripe_customer_id = sess.get('customer')
                 sub_obj.save()
+
+                # CRITICAL FIX: Update user role to PRO
+                user.role = User.Role.PRO
+                user.save(update_fields=['role'])
+
                 PaymentTransaction.objects.filter(stripe_session_id=sess['id']).update(status='succeeded')
+
+                # Send push notification for payment success
+                try:
+                    from notifications.fcm_utils import send_payment_success_notification
+                    from notifications.models import Notification
+
+                    # Send push notification
+                    send_payment_success_notification(user, amount=sess.get('amount_total', 0) / 100, currency='USD')
+
+                    # Create in-app notification
+                    Notification.objects.create(
+                        user=user,
+                        message="Your payment was successful! Welcome to Pro membership."
+                    )
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"Failed to send payment notification: {str(e)}")
 
         elif event.get('type') == 'invoice.payment_failed':
             inv = event['data']['object']
@@ -78,6 +101,11 @@ class StripeWebhookView(APIView):
                 sub_obj.payment_status = 'cancelled'
                 sub_obj.end_date = timezone.now().date()
                 sub_obj.save()
+
+                # Downgrade user role to BASIC when subscription cancelled
+                user = sub_obj.user
+                user.role = User.Role.BASIC
+                user.save(update_fields=['role'])
             except Subscription.DoesNotExist:
                 pass
 
@@ -103,6 +131,11 @@ class CancelSubscriptionView(APIView):
         sub.payment_status = 'cancelled'
         sub.end_date = timezone.now().date()
         sub.save()
+
+        # Downgrade user role to BASIC
+        request.user.role = User.Role.BASIC
+        request.user.save(update_fields=['role'])
+
         return Response({"message": "Subscription cancelled"})
 
 

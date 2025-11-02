@@ -41,8 +41,27 @@ class TaskViewSet(viewsets.ModelViewSet):
             assignee = User.objects.get(pk=user_id)
         except User.DoesNotExist:
             return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-        TaskAssignment.objects.get_or_create(task=task, user=assignee)
-        # TODO: send notification via FCM
+
+        assignment, created = TaskAssignment.objects.get_or_create(task=task, user=assignee)
+
+        # Send push notification to assignee
+        if created:
+            try:
+                from notifications.fcm_utils import send_task_assignment_notification
+                send_task_assignment_notification(task, assignee)
+            except Exception as e:
+                # Don't fail the request if notification fails
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to send task assignment notification: {str(e)}")
+
+            # Create in-app notification
+            from notifications.models import Notification
+            Notification.objects.create(
+                user=assignee,
+                message=f"You've been assigned to task: {task.title}"
+            )
+
         return Response({"message": "Task assigned"}, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post', 'get'], url_path='media')
