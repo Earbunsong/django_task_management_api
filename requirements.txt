@@ -1,0 +1,58 @@
+# Django Framework
+Django>=4.2,<5.0
+djangorestframework>=3.14.0
+djangorestframework-simplejwt>=5.3.0
+
+# Database
+psycopg2-binary>=2.9.9
+
+# Environment Variables
+python-dotenv>=1.0.0
+
+# CORS Headers for Flutter
+django-cors-headers>=4.3.1
+
+# API Documentation
+drf-spectacular>=0.27.0
+
+# Payment Integration
+stripe>=7.0.0
+paypalrestsdk>=1.13.1
+
+# Email (optional, for SendGrid or others)
+# sendgrid>=6.11.0
+
+# Cloudinary for Media Uploads
+cloudinary>=1.36.0
+
+# Firebase Cloud Messaging
+firebase-admin>=6.3.0
+
+# Security & Utilities
+python-decouple>=3.8
+Pillow>=10.1.0
+
+# Production Server
+gunicorn>=21.2.0
+whitenoise>=6.6.0
+
+# Caching
+django-redis>=5.4.0
+redis>=5.0.1
+
+# Celery for Async Tasks (optional)
+celery>=5.3.4
+
+# Testing
+pytest>=7.4.3
+pytest-django>=4.7.0
+pytest-cov>=4.1.0
+factory-boy>=3.3.0
+
+# Code Quality
+black>=23.12.0
+flake8>=6.1.0
+isort>=5.13.0
+
+# Monitoring (optional)
+# sentry-sdk>=1.39.0

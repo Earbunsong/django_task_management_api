@@ -225,6 +225,13 @@ STRIPE_PRICE_ID_ANNUAL = os.environ.get('STRIPE_PRICE_ID_ANNUAL', '')
 FRONTEND_SUCCESS_URL = os.environ.get('FRONTEND_SUCCESS_URL', 'http://localhost:3000/success?session_id={CHECKOUT_SESSION_ID}')
 FRONTEND_CANCEL_URL = os.environ.get('FRONTEND_CANCEL_URL', 'http://localhost:3000/cancel')
 
+# PayPal settings (set via environment variables)
+PAYPAL_CLIENT_ID = os.environ.get('PAYPAL_CLIENT_ID', '')
+PAYPAL_CLIENT_SECRET = os.environ.get('PAYPAL_CLIENT_SECRET', '')
+PAYPAL_MODE = os.environ.get('PAYPAL_MODE', 'sandbox')  # 'sandbox' or 'live'
+PAYPAL_MONTHLY_PLAN_ID = os.environ.get('PAYPAL_MONTHLY_PLAN_ID', '')
+PAYPAL_ANNUAL_PLAN_ID = os.environ.get('PAYPAL_ANNUAL_PLAN_ID', '')
+
 # Email Configuration
 EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
 EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
@@ -233,6 +240,9 @@ EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@taskmanager.com')
+
+# Frontend URL for mobile app deep linking
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
 
 # Cloudinary Configuration
 CLOUDINARY_CLOUD_NAME = os.environ.get('CLOUDINARY_CLOUD_NAME', '')

@@ -50,6 +50,20 @@ class RegisterView(APIView):
         try:
             send_verification_email(user, request)
             logger.info(f"User {user.username} registered successfully. Verification email sent.")
+
+            # Send push notification and in-app notification
+            try:
+                from notifications.fcm_utils import send_registration_notification
+                from notifications.models import Notification
+
+                send_registration_notification(user)
+                Notification.objects.create(
+                    user=user,
+                    message=f"Welcome {user.username}! Please verify your email to unlock all features."
+                )
+            except Exception as notif_error:
+                logger.error(f"Failed to send registration notification: {str(notif_error)}")
+
             return Response({
                 "message": "Registered successfully. Please check your email to verify your account.",
                 "user": UserSerializer(user).data
@@ -84,6 +98,19 @@ class VerifyEmailView(APIView):
         user.save(update_fields=['is_verified'])
         logger.info(f"User {user.username} email verified successfully.")
 
+        # Send push notification
+        try:
+            from notifications.fcm_utils import send_email_verification_success_notification
+            from notifications.models import Notification
+
+            send_email_verification_success_notification(user)
+            Notification.objects.create(
+                user=user,
+                message="Your email has been verified successfully. You now have full access!"
+            )
+        except Exception as e:
+            logger.error(f"Failed to send email verification notification: {str(e)}")
+
         return Response({
             "message": "Email verified successfully! You can now log in."
         }, status=status.HTTP_200_OK)
@@ -114,6 +141,20 @@ class ForgotPasswordView(APIView):
             # Send reset email
             if send_password_reset_email(user, request):
                 logger.info(f"Password reset email sent to {email}")
+
+                # Send push notification
+                try:
+                    from notifications.fcm_utils import send_password_reset_requested_notification
+                    from notifications.models import Notification
+
+                    send_password_reset_requested_notification(user)
+                    Notification.objects.create(
+                        user=user,
+                        message="Password reset requested. Check your email for instructions."
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to send password reset notification: {str(e)}")
+
                 return Response({
                     "message": "If an account with that email exists, a password reset link has been sent."
                 }, status=status.HTTP_200_OK)
@@ -162,6 +203,19 @@ class ResetPasswordView(APIView):
         user.set_password(new_password)
         user.save()
         logger.info(f"Password reset successfully for user {user.username}")
+
+        # Send push notification
+        try:
+            from notifications.fcm_utils import send_password_reset_success_notification
+            from notifications.models import Notification
+
+            send_password_reset_success_notification(user)
+            Notification.objects.create(
+                user=user,
+                message="Your password has been changed successfully. Please log in with your new password."
+            )
+        except Exception as e:
+            logger.error(f"Failed to send password reset success notification: {str(e)}")
 
         return Response({
             "message": "Password reset successfully. You can now log in with your new password."

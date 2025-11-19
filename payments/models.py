@@ -7,13 +7,19 @@ class Subscription(models.Model):
         BASIC = 'basic', 'Basic'
         PRO = 'pro', 'Pro'
 
+    class PaymentProvider(models.TextChoices):
+        STRIPE = 'stripe', 'Stripe'
+        PAYPAL = 'paypal', 'PayPal'
+
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='subscription')
     plan_type = models.CharField(max_length=10, choices=PlanType.choices, default=PlanType.BASIC, db_index=True)
     start_date = models.DateField(null=True, blank=True, db_index=True)
     end_date = models.DateField(null=True, blank=True, db_index=True)
     payment_status = models.CharField(max_length=20, default='inactive', db_index=True)
+    payment_provider = models.CharField(max_length=10, choices=PaymentProvider.choices, blank=True, null=True, db_index=True)
     stripe_subscription_id = models.CharField(max_length=255, blank=True, null=True, unique=True, db_index=True)
     stripe_customer_id = models.CharField(max_length=255, blank=True, null=True, db_index=True)
+    paypal_subscription_id = models.CharField(max_length=255, blank=True, null=True, unique=True, db_index=True)
 
     class Meta:
         indexes = [
@@ -25,8 +31,14 @@ class Subscription(models.Model):
 
 
 class PaymentTransaction(models.Model):
+    class PaymentProvider(models.TextChoices):
+        STRIPE = 'stripe', 'Stripe'
+        PAYPAL = 'paypal', 'PayPal'
+
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='payments', db_index=True)
+    payment_provider = models.CharField(max_length=10, choices=PaymentProvider.choices, default=PaymentProvider.STRIPE, db_index=True)
     stripe_session_id = models.CharField(max_length=255, blank=True, db_index=True)
+    paypal_order_id = models.CharField(max_length=255, blank=True, db_index=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     currency = models.CharField(max_length=10, default='usd')
     status = models.CharField(max_length=50, default='pending', db_index=True)

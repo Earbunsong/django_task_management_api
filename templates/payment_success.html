@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Successful</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: #4caf50;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            animation: scaleIn 0.5s ease;
+        }
+        @keyframes scaleIn {
+            from {
+                transform: scale(0);
+            }
+            to {
+                transform: scale(1);
+            }
+        }
+        .checkmark {
+            width: 40px;
+            height: 40px;
+            border: 4px solid white;
+            border-top: none;
+            border-right: none;
+            transform: rotate(-45deg);
+            margin-bottom: 10px;
+        }
+        h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        p {
+            color: #666;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        .success-details {
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        .success-details p {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+        }
+        .success-details strong {
+            color: #333;
+            min-width: 120px;
+        }
+        .badge {
+            display: inline-block;
+            background: #4caf50;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: 600;
+            margin-top: 20px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        .note {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="success-icon">
+            <div class="checkmark"></div>
+        </div>
+
+        <h1>🎉 Payment Successful!</h1>
+        <p>Welcome to Pro membership! Your payment has been processed successfully.</p>
+
+        <div class="success-details">
+            <p>
+                <strong>Status:</strong>
+                <span class="badge">PRO ACTIVE</span>
+            </p>
+            <p>
+                <strong>Session ID:</strong>
+                <span id="sessionId" style="font-size: 12px; color: #666; word-break: break-all;"></span>
+            </p>
+        </div>
+
+        <p><strong>You now have access to:</strong></p>
+        <div style="text-align: left; margin: 0 auto; max-width: 300px;">
+            <p>✅ Unlimited tasks</p>
+            <p>✅ Task assignment to team</p>
+            <p>✅ Unlimited media uploads</p>
+            <p>✅ Priority support</p>
+        </div>
+
+        <a href="#" class="button" onclick="closeWindow()">Return to App</a>
+
+        <p class="note">
+            Please close this browser tab and return to the Task Manager app.<br>
+            Your subscription will be activated automatically.
+        </p>
+    </div>
+
+    <script>
+        // Extract session ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const sessionId = urlParams.get('session_id');
+        if (sessionId) {
+            document.getElementById('sessionId').textContent = sessionId;
+        }
+
+        // Try to close the window (works in some browsers)
+        function closeWindow() {
+            window.close();
+            // If window.close() doesn't work, show a message
+            setTimeout(() => {
+                alert('Please manually close this browser tab and return to the app.');
+            }, 500);
+        }
+
+        // Auto-close after 5 seconds (optional)
+        // setTimeout(closeWindow, 5000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Cancelled</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        .cancel-icon {
+            width: 80px;
+            height: 80px;
+            background: #ff9800;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 48px;
+        }
+        h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        p {
+            color: #666;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: 600;
+            margin: 10px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        .button.secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+        .note {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="cancel-icon">⚠️</div>
+
+        <h1>Payment Cancelled</h1>
+        <p>You've cancelled the payment process. No charges have been made to your account.</p>
+
+        <p>If you change your mind, you can upgrade to Pro anytime from the app.</p>
+
+        <div style="margin: 30px 0;">
+            <a href="#" class="button" onclick="closeWindow()">Return to App</a>
+        </div>
+
+        <p class="note">
+            Please close this browser tab and return to the Task Manager app.
+        </p>
+    </div>
+
+    <script>
+        // Try to close the window (works in some browsers)
+        function closeWindow() {
+            window.close();
+            // If window.close() doesn't work, show a message
+            setTimeout(() => {
+                alert('Please manually close this browser tab and return to the app.');
+            }, 500);
+        }
+
+        // Auto-close after 3 seconds (optional)
+        // setTimeout(closeWindow, 3000);
+    </script>
+</body>
+</html>
