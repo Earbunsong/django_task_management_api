@@ -15,7 +15,9 @@ class EmailVerificationTokenGenerator(PasswordResetTokenGenerator):
     """Token generator for email verification"""
 
     def _make_hash_value(self, user, timestamp):
-        return f"{user.pk}{timestamp}{user.is_verified}"
+        # Don't include is_verified in hash - it changes after verification
+        # Use email instead to ensure token is tied to the user
+        return f"{user.pk}{timestamp}{user.email}"
 
 
 email_verification_token = EmailVerificationTokenGenerator()
@@ -38,15 +40,10 @@ def send_verification_email(user, request=None):
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         token = email_verification_token.make_token(user)
 
-        # Build verification URL
-        if request:
-            domain = request.get_host()
-            protocol = 'https' if request.is_secure() else 'http'
-        else:
-            domain = settings.FRONTEND_URL if hasattr(settings, 'FRONTEND_URL') else 'localhost:3000'
-            protocol = 'http'
-
-        verification_url = f"{protocol}://{domain}/api/v1/auth/verify/{uid}/{token}/"
+        # Build verification URL using deep link for mobile app
+        # Format: FRONTEND_URL/verify-email?uid=XXX&token=YYY
+        frontend_url = settings.FRONTEND_URL.rstrip('/')
+        verification_url = f"{frontend_url}/verify-email?uid={uid}&token={token}"
 
         # Email content
         subject = 'Verify Your Email - Task Management System'

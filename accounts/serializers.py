@@ -2,8 +2,10 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+import logging
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -76,8 +78,32 @@ class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
         except User.DoesNotExist:
             raise serializers.ValidationError('No active account found with the given credentials.')
 
+        # Log user verification status for debugging
+        logger.info(f"Login attempt for user {user.username} (email: {email})")
+        logger.info(f"User verification status: is_verified={user.is_verified}, is_active={user.is_active}, is_disabled={user.is_disabled}")
+
+        # Check if account is disabled
+        if user.is_disabled or not user.is_active:
+            logger.warning(f"Login blocked for disabled user: {email}")
+            raise serializers.ValidationError({
+                'account_disabled': True,
+                'email': email,
+                'message': 'Your account has been disabled by an administrator. Please contact support for assistance.'
+            })
+
+        # Check if email is verified
+        if not user.is_verified:
+            logger.warning(f"Login blocked for unverified user: {email}")
+            raise serializers.ValidationError({
+                'email_not_verified': True,
+                'email': email,
+                'message': 'Please verify your email before logging in. Check your inbox for the verification link.'
+            })
+
         # Add username to attrs for parent validation
         attrs['username'] = user.username
+
+        logger.info(f"User {user.username} passed verification check, proceeding with authentication")
 
         # Call parent validate
         return super().validate(attrs)

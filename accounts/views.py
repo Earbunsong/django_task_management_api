@@ -81,14 +81,20 @@ class VerifyEmailView(APIView):
 
     def get(self, request, uidb64: str, token: str):
         """Verify email using token from email link"""
+        logger.info(f"Email verification attempt - uidb64: {uidb64}, token preview: {token[:10]}...")
+
         user = verify_email_token(uidb64, token)
 
         if user is None:
+            logger.warning(f"Email verification failed - invalid or expired token")
             return Response({
                 "detail": "Invalid or expired verification link."
             }, status=status.HTTP_400_BAD_REQUEST)
 
+        logger.info(f"Token valid for user: {user.username} (email: {user.email}), current is_verified: {user.is_verified}")
+
         if user.is_verified:
+            logger.info(f"User {user.username} already verified, returning success")
             return Response({
                 "message": "Email already verified. You can log in now."
             }, status=status.HTTP_200_OK)
@@ -96,7 +102,10 @@ class VerifyEmailView(APIView):
         # Mark user as verified
         user.is_verified = True
         user.save(update_fields=['is_verified'])
-        logger.info(f"User {user.username} email verified successfully.")
+
+        # Verify the save was successful
+        user.refresh_from_db()
+        logger.info(f"User {user.username} email verified successfully. Confirmed is_verified={user.is_verified}")
 
         # Send push notification
         try:
@@ -114,6 +123,44 @@ class VerifyEmailView(APIView):
         return Response({
             "message": "Email verified successfully! You can now log in."
         }, status=status.HTTP_200_OK)
+
+
+class ResendVerificationEmailView(APIView):
+    permission_classes = [AllowAnyForAuth]
+
+    def post(self, request):
+        """Resend verification email to user"""
+        email = request.data.get('email')
+        if not email:
+            return Response({
+                "detail": "Email is required."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(email=email)
+
+            # Check if already verified
+            if user.is_verified:
+                return Response({
+                    "message": "Email is already verified. You can log in now."
+                }, status=status.HTTP_200_OK)
+
+            # Send verification email
+            if send_verification_email(user, request):
+                logger.info(f"Verification email resent to {email}")
+                return Response({
+                    "message": "Verification email sent! Please check your inbox."
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response({
+                    "detail": "Failed to send verification email. Please try again later."
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        except User.DoesNotExist:
+            # Don't reveal if email exists or not (security best practice)
+            return Response({
+                "message": "If an account with that email exists, a verification email has been sent."
+            }, status=status.HTTP_200_OK)
 
 
 class LogoutView(APIView):
@@ -242,9 +289,15 @@ class AdminDisableUserView(APIView):
         except User.DoesNotExist:
             return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
+        # Prevent admins from disabling themselves
+        if user.id == request.user.id:
+            return Response({"detail": "You cannot disable your own account"}, status=status.HTTP_400_BAD_REQUEST)
+
         user.is_disabled = True
         user.is_active = False
         user.save(update_fields=["is_disabled", "is_active"])
+
+        logger.info(f"Admin {request.user.username} disabled user {user.username}")
 
         # Send notification to user
         try:
@@ -259,4 +312,35 @@ class AdminDisableUserView(APIView):
         except Exception as e:
             logger.error(f"Failed to send account status notification: {str(e)}")
 
-        return Response({"message": "User disabled"}, status=status.HTTP_200_OK)
+        return Response({"message": "User disabled successfully"}, status=status.HTTP_200_OK)
+
+
+class AdminEnableUserView(APIView):
+    permission_classes = [permissions.IsAdminUser]
+
+    def patch(self, request, pk: int):
+        try:
+            user = User.objects.get(pk=pk)
+        except User.DoesNotExist:
+            return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        user.is_disabled = False
+        user.is_active = True
+        user.save(update_fields=["is_disabled", "is_active"])
+
+        logger.info(f"Admin {request.user.username} enabled user {user.username}")
+
+        # Send notification to user
+        try:
+            from notifications.fcm_utils import send_account_status_notification
+            from notifications.models import Notification
+
+            send_account_status_notification(user, is_disabled=False)
+            Notification.objects.create(
+                user=user,
+                message="Your account has been enabled. You can now access all features."
+            )
+        except Exception as e:
+            logger.error(f"Failed to send account status notification: {str(e)}")
+
+        return Response({"message": "User enabled successfully"}, status=status.HTTP_200_OK)
