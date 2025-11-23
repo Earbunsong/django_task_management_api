@@ -68,3 +68,15 @@ celerybeat.pid
 # Backup files
 *.bak
 *.md
+
+# Firebase service accounts
+*service-account*.json
+firebase*.json
+
+# Postman collections and environments
+*Postman_Collection.json
+*Postman_Environment.json
+
+# Or ignore all Postman files
+*.postman_collection.json
+*.postman_environment.json
