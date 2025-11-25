@@ -13,6 +13,11 @@ urlpatterns = [
     path('paypal/webhook/', views.PayPalWebhookView.as_view(), name='paypal-webhook'),
     path('paypal/cancel/', views.CancelPayPalSubscriptionView.as_view(), name='paypal-cancel-subscription'),
 
+    # KHQR endpoints
+    path('khqr/create-payment/', views.CreateKHQRPaymentView.as_view(), name='khqr-create-payment'),
+    path('khqr/check-status/', views.CheckKHQRPaymentStatusView.as_view(), name='khqr-check-status'),
+    path('khqr/webhook/', views.KHQRWebhookView.as_view(), name='khqr-webhook'),
+
     # Common endpoints
 
 

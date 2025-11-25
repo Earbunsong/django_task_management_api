@@ -232,6 +232,17 @@ PAYPAL_MODE = os.environ.get('PAYPAL_MODE', 'sandbox')  # 'sandbox' or 'live'
 PAYPAL_MONTHLY_PLAN_ID = os.environ.get('PAYPAL_MONTHLY_PLAN_ID', '')
 PAYPAL_ANNUAL_PLAN_ID = os.environ.get('PAYPAL_ANNUAL_PLAN_ID', '')
 
+# KHQR settings (set via environment variables)
+KHQR_ENABLED = os.environ.get('KHQR_ENABLED', 'false').lower() == 'true'
+KHQR_MOCK_MODE = os.environ.get('KHQR_MOCK_MODE', 'false').lower() == 'true'
+KHQR_API_BASE_URL = os.environ.get('KHQR_API_BASE_URL', 'https://api-bakong.nbc.gov.kh')
+KHQR_API_TOKEN = os.environ.get('KHQR_API_TOKEN', '')
+KHQR_ACCOUNT_ID = os.environ.get('KHQR_ACCOUNT_ID', '')
+KHQR_MERCHANT_NAME = os.environ.get('KHQR_MERCHANT_NAME', '')
+KHQR_MERCHANT_CITY = os.environ.get('KHQR_MERCHANT_CITY', '')
+KHQR_CURRENCY = os.environ.get('KHQR_CURRENCY', 'KHR')
+KHQR_TRANSACTION_TYPE = os.environ.get('KHQR_TRANSACTION_TYPE', 'PP')
+
 # Email Configuration
 EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
 EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')

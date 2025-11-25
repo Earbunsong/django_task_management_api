@@ -11,8 +11,10 @@ from django.views import View
 import stripe
 import paypalrestsdk
 import json
+from decimal import Decimal
 from .models import Subscription, PaymentTransaction
 from .serializers import SubscriptionSerializer, PaymentTransactionSerializer
+from .khqr_service import KHQRService
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 User = get_user_model()
@@ -589,3 +591,229 @@ class CancelPayPalSubscriptionView(APIView):
         request.user.save(update_fields=['role'])
 
         return Response({"message": "PayPal subscription cancelled"})
+
+
+# ==================== KHQR Payment Views ====================
+
+class CreateKHQRPaymentView(APIView):
+    """Generate KHQR QR code for payment"""
+    def post(self, request):
+        plan = request.data.get('plan', 'monthly')
+
+        if not settings.KHQR_ENABLED:
+            return Response(
+                {"detail": "KHQR payment is not enabled"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        # Define pricing in KHR (1 USD ≈ 4000 KHR)
+        prices = {
+            'monthly': {'amount': 400, 'description': 'Monthly Pro Subscription'},
+            'annual': {'amount': 400, 'description': 'Annual Pro Subscription'}
+        }
+
+        price_info = prices.get(plan, prices['monthly'])
+
+        try:
+            # Generate KHQR QR code
+            result = KHQRService.generate_qr_code(
+                amount=price_info['amount'],
+                currency=settings.KHQR_CURRENCY,
+                description=price_info['description']
+            )
+
+            # Store pending transaction
+            transaction = PaymentTransaction.objects.create(
+                user=request.user,
+                payment_provider=PaymentTransaction.PaymentProvider.KHQR,
+                khqr_transaction_id=result['transaction_id'],
+                status='pending',
+                amount=Decimal(str(price_info['amount'])),
+                currency=settings.KHQR_CURRENCY.lower()
+            )
+
+            return Response({
+                'success': True,
+                'qr_code': result['qr_code'],
+                'qr_string': result['qr_string'],
+                'transaction_id': result['transaction_id'],
+                'amount': price_info['amount'],
+                'currency': settings.KHQR_CURRENCY,
+                'description': price_info['description'],
+                'plan': plan
+            })
+
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"KHQR payment creation error: {str(e)}")
+            return Response(
+                {"detail": f"Failed to create KHQR payment: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+class CheckKHQRPaymentStatusView(APIView):
+    """Check KHQR payment status and update subscription if paid"""
+    def post(self, request):
+        transaction_id = request.data.get('transaction_id')
+
+        if not transaction_id:
+            return Response(
+                {"detail": "transaction_id is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # Get payment transaction
+            try:
+                transaction = PaymentTransaction.objects.get(
+                    khqr_transaction_id=transaction_id,
+                    user=request.user
+                )
+            except PaymentTransaction.DoesNotExist:
+                return Response(
+                    {"detail": "Transaction not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Check if already processed
+            if transaction.status == 'succeeded':
+                return Response({
+                    'status': 'success',
+                    'message': 'Payment already processed',
+                    'paid': True
+                })
+
+            # Check payment status with KHQR
+            result = KHQRService.check_payment_status(transaction_id)
+
+            if result.get('paid', False):
+                # Update transaction
+                transaction.status = 'succeeded'
+                transaction.save()
+
+                # Update subscription
+                sub, _ = Subscription.objects.get_or_create(user=request.user)
+                sub.plan_type = Subscription.PlanType.PRO
+                sub.payment_status = 'active'
+                sub.payment_provider = Subscription.PaymentProvider.KHQR
+                sub.start_date = timezone.now().date()
+                sub.khqr_transaction_id = transaction_id
+                sub.save()
+
+                # Update user role to PRO
+                request.user.role = User.Role.PRO
+                request.user.save(update_fields=['role'])
+
+                # Send push notification for payment success
+                try:
+                    from notifications.fcm_utils import send_payment_success_notification
+                    from notifications.models import Notification
+
+                    send_payment_success_notification(
+                        request.user,
+                        amount=float(transaction.amount),
+                        currency=transaction.currency.upper()
+                    )
+
+                    Notification.objects.create(
+                        user=request.user,
+                        message="Your KHQR payment was successful! Welcome to Pro membership."
+                    )
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"Failed to send payment notification: {str(e)}")
+
+                return Response({
+                    'status': 'success',
+                    'message': 'Payment successful',
+                    'paid': True,
+                    'subscription': SubscriptionSerializer(sub).data
+                })
+            else:
+                return Response({
+                    'status': 'pending',
+                    'message': 'Payment not yet received',
+                    'paid': False
+                })
+
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"KHQR status check error: {str(e)}")
+            return Response(
+                {"detail": f"Error checking payment status: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class KHQRWebhookView(APIView):
+    """Handle KHQR webhook events"""
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        try:
+            event_body = json.loads(request.body)
+            event_type = event_body.get('event_type')
+            transaction_id = event_body.get('transaction_id')
+
+            if not transaction_id:
+                return Response(status=status.HTTP_400_BAD_REQUEST)
+
+            # Handle payment completed event
+            if event_type == 'payment.completed':
+                try:
+                    transaction = PaymentTransaction.objects.get(
+                        khqr_transaction_id=transaction_id
+                    )
+
+                    if transaction.status != 'succeeded':
+                        # Update transaction
+                        transaction.status = 'succeeded'
+                        transaction.save()
+
+                        # Update subscription
+                        user = transaction.user
+                        sub, _ = Subscription.objects.get_or_create(user=user)
+                        sub.plan_type = Subscription.PlanType.PRO
+                        sub.payment_status = 'active'
+                        sub.payment_provider = Subscription.PaymentProvider.KHQR
+                        sub.start_date = timezone.now().date()
+                        sub.khqr_transaction_id = transaction_id
+                        sub.save()
+
+                        # Update user role to PRO
+                        user.role = User.Role.PRO
+                        user.save(update_fields=['role'])
+
+                        # Send notification
+                        try:
+                            from notifications.fcm_utils import send_payment_success_notification
+                            from notifications.models import Notification
+
+                            send_payment_success_notification(
+                                user,
+                                amount=float(transaction.amount),
+                                currency=transaction.currency.upper()
+                            )
+
+                            Notification.objects.create(
+                                user=user,
+                                message="Your KHQR payment was successful! Welcome to Pro membership."
+                            )
+                        except Exception:
+                            pass
+
+                except PaymentTransaction.DoesNotExist:
+                    pass
+
+            return Response(status=status.HTTP_200_OK)
+
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"KHQR webhook error: {str(e)}")
+            return Response(status=status.HTTP_400_BAD_REQUEST)
